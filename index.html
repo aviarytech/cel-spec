@@ -368,27 +368,25 @@ verifiers in a decentralized manner.
         <h2>Event Log</h2>
 
         <p>
-A <dfn data-lt="event log">cryptographic event log</dfn> contains a [=list=] of
-witnessed events. The log's basic structure is shown below:
+A <dfn data-lt="event log">cryptographic event log</dfn> contains a [=list=] of witnessed events. 
+The log's basic structure is shown below:
         </p>
 
         <pre class="example nohighlight" title="An event log containing multiple events">
-{
-  "log": [{
-    "event": {<span class="comment">...</span>}, <span class="comment">// the first event in the event log</span>
-    "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the event</span>
-    }, {
-    "event": {<span class="comment">...</span>}, <span class="comment">// the second event</span>
-    "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the second event</span>
-    }, {
-    "event": {<span class="comment">...</span>}, <span class="comment">// the third event</span>
-    "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the third event</span>
-  }]
-}
+[{
+  "event": {<span class="comment">...</span>}, <span class="comment">// the first event in the event log</span>
+  "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the event</span>
+}, {
+  "event": {<span class="comment">...</span>}, <span class="comment">// the second event</span>
+  "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the second event</span>
+}, {
+  "event": {<span class="comment">...</span>}, <span class="comment">// the third event</span>
+  "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the third event</span>
+}]
         </pre>
 
         <p>
-An [=event log=] MUST conform to the following format:
+An [=event log=] MUST be a [=list=] where each entry conforms to the following format:
         </p>
 
         <table class="simple">
@@ -400,87 +398,63 @@ An [=event log=] MUST conform to the following format:
           </thead>
           <tbody>
             <tr>
-              <td>log</td>
+              <td>event</td>
               <td>
-A REQUIRED property whose value is a [=list=] of one or more entries that
-conform to the following format:
-                <table class="simple">
-                  <thead>
-                    <tr>
-                      <th style="white-space: nowrap">Property</th>
-                      <th>Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>event</td>
-                      <td>
 A REQUIRED property whose value conforms to the data structure defined in
 Section [[[#event-entry]]].
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>proof</td>
-                      <td>
+              </td>
+            </tr>
+            <tr>
+              <td>proof</td>
+              <td>
 A REQUIRED property whose value conforms to a [=data integrity proof=]
 as defined by the [[VC-DATA-INTEGRITY]] specification. [=Conforming processors=]
 MUST support at least the `ecdsa-jcs-2019` cryptosuite as defined by the
 [[[VC-DI-ECDSA]]] specification.
-
-                        <p class="issue" data-number="2"></p>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td>previousLog</td>
-              <td>
-An OPTIONAL property whose value MUST conform to an external reference as
-defined in Section [[[#external-reference]]]. The value MUST also contain a
-`proof` property whose value conforms to a [=data integrity proof=] as defined
-by the [[VC-DATA-INTEGRITY]] specification. [=Conforming processors=] MUST
-support at least the `ecdsa-jcs-2019` cryptosuite as defined by the
-[[[VC-DI-ECDSA]]] specification. Event logs MUST have a default maximum size of
-10MB which can be overridden by [=application specification=]s and SHOULD be at
-least 1MB in size before creating a new chunk.
               </td>
             </tr>
           </tbody>
         </table>
 
         <p>
-To support chunking, the `previousLog` property is provided to ensure that
-arbitrarily long change histories are supported.
+To support chunking, a special `previousLog` event type is provided to ensure that
+arbitrarily long change histories are supported. Event logs MUST have a default maximum size of
+10MB which can be overridden by [=application specification=]s and SHOULD be at
+least 1MB in size before creating a new chunk. When a log exceeds the maximum size,
+a new log should be created with its first event being a `previousLog` event that 
+references the previous log.
         </p>
 
-        <pre class="example nohighlight" title="An event log containing multiple events">
-{
-  "previousLog" : {
-    <span class="comment">// URLs that can be used to retrieve the previous event log</span>
-    "url": [
-      "https://website.example/log123.cel",
-      "3jxop4cs2lu5ur2<span class="comment">...</span>sseqdsp3k262uwy4.onion/log123.cel",
-      "ipfs://QmCQFJGkARStJbTy8w65yBXgyfG2ZBg5TrfB2hPjrDQH3R"
-    ],
-    <span class="comment">// The media type associated with the previous log</span>
-    "mediaType": "application/cel",
-    <span class="comment">// a cryptographic digest of the previous log (sha2-256 base64-url-nopad)</span>
-    "digestMultibase": "uEiwLZcLK9EBguM5WZlbAgfXBDuQAkoYyQ6YVtUmER8pN24"
+        <pre class="example nohighlight" title="An event log with a previous log reference">
+[{
+  "event": {
+    "operation": {
+      "type": "previousLog",
+      "dataReference": {
+        <span class="comment">// URLs that can be used to retrieve the previous event log</span>
+        "url": [
+          "https://website.example/log123.cel",
+          "3jxop4cs2lu5ur2<span class="comment">...</span>sseqdsp3k262uwy4.onion/log123.cel",
+          "ipfs://QmCQFJGkARStJbTy8w65yBXgyfG2ZBg5TrfB2hPjrDQH3R"
+        ],
+        <span class="comment">// The media type associated with the previous log</span>
+        "mediaType": "application/cel",
+        <span class="comment">// a cryptographic digest of the previous log (sha2-256 base64-url-nopad)</span>
+        "digestMultibase": "uEiwLZcLK9EBguM5WZlbAgfXBDuQAkoYyQ6YVtUmER8pN24"
+      }
+    },
     "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the previous event log</span>
+  }, {
+  "event": {
+    "operation": {
+      "type": "create",
+      // ... rest of create event
+    }
   },
-  "log": [{
-    "event": {<span class="comment">...</span>}, <span class="comment">// the first event in the event log</span>
-    "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the event</span>
-    }, {
-    "event": {<span class="comment">...</span>}, <span class="comment">// the second event</span>
-    "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the second event</span>
-    }, {
-    "event": {<span class="comment">...</span>}, <span class="comment">// the third event</span>
-    "proof": [<span class="comment">...</span>]  <span class="comment">// a list of witness proofs securing the third event</span>
-  }]
-}
+  "proof": [<span class="comment">...</span>]
+}, {
+  // ... additional events
+}]
         </pre>
 
       </section>
@@ -585,7 +559,7 @@ a `dataReference` property and MUST conform to the following data format:
                       <td>
 A REQUIRED property whose value is the type of event being expressed. A
 [=conforming processor=] MUST support the following [=string=] values: `create`,
-`update`, and `deactivate` and MAY support other values defined by a
+`update`, `deactivate`, and `previousLog` and MAY support other values defined by a
 [=conforming application specification=].
 
                         <div class="issue" data-number="7"></div>
